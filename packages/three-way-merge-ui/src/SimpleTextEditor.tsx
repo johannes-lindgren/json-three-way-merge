@@ -1,11 +1,12 @@
-import Editor from "@monaco-editor/react";
+import Editor from "@monaco-editor/react"
 
 type Props = {
-  value: string; // current text
-  onChange?: (value: string) => void; // callback when user types
-};
+  value: string // current text
+  onChange?: (value: string) => void // callback when user types
+  readonly?: boolean
+}
 
-export default function SimpleTextEditor({ value, onChange }: Props) {
+export default function SimpleTextEditor({ value, onChange, readonly }: Props) {
   return (
     <Editor
       height="400px"
@@ -13,10 +14,10 @@ export default function SimpleTextEditor({ value, onChange }: Props) {
       value={value} // controlled from props
       onChange={(val) => val && onChange?.(val)}
       options={{
-        readOnly: false,
+        readOnly: readonly,
         minimap: { enabled: false },
         fontSize: 14,
       }}
     />
-  );
+  )
 }

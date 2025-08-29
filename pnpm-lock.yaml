@@ -46,6 +46,9 @@ importers:
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
+      jsondiffpatch:
+        specifier: ^0.7.3
+        version: 0.7.3
       monaco-editor:
         specifier: ^0.52.2
         version: 0.52.2

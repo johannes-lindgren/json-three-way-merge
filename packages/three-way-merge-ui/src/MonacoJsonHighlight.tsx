@@ -1,17 +1,17 @@
-import React, { useEffect, useMemo, useRef } from "react"
-import Editor from "@monaco-editor/react"
-import * as monaco from "monaco-editor"
-import { findNodeAtLocation, type Node, parseTree } from "jsonc-parser"
-import type { JsonPatch } from "./JsonPatch.tsx"
-import { createPortal } from "react-dom"
-import { css } from "./Css.tsx"
+import React, { useEffect, useMemo, useRef } from 'react'
+import Editor from '@monaco-editor/react'
+import * as monaco from 'monaco-editor'
+import { findNodeAtLocation, type Node, parseTree } from 'jsonc-parser'
+import type { JsonPatch } from './JsonPatch.tsx'
+import { createPortal } from 'react-dom'
+import { css } from './Css.tsx'
 
 // Map patch type → class
-const patchClassMap: Record<JsonPatch["op"], string> = {
-  add: "highlight-add",
-  remove: "highlight-remove",
-  replace: "highlight-replace",
-  move: "highlight-move",
+const patchClassMap: Record<JsonPatch['op'], string> = {
+  add: 'highlight-add',
+  remove: 'highlight-remove',
+  replace: 'highlight-replace',
+  move: 'highlight-move',
 }
 
 export type MonacoJsonHighlightProps = {
@@ -27,10 +27,10 @@ const addPatchWidget = (
   patchId: string,
   portalTarget: HTMLElement,
 ) => {
-  const container = document.createElement("div")
-  container.style.position = "absolute"
-  container.style.left = "0px"
-  container.style.zIndex = "1000" // ensure it sits above editor layers
+  const container = document.createElement('div')
+  container.style.position = 'absolute'
+  container.style.left = '0px'
+  container.style.zIndex = '1000' // ensure it sits above editor layers
   container.appendChild(portalTarget)
 
   // Append to the editor's DOM node
@@ -59,18 +59,21 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
 
   const value = useMemo(() => JSON.stringify(json, null, 2), [json])
 
-  const disposePatchWidgetsRef = useRef<(() => void)[]>([])
-
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef =
     useRef<monaco.editor.IEditorDecorationsCollection | null>(null)
 
-  const patchInfo = patches.map((patch) => ({
-    patch,
-    portalTarget: document.createElement("div"),
-  }))
+  const patchInfo = useMemo(
+    () =>
+      patches.map((patch) => ({
+        patch,
+        portalTarget: document.createElement('div'),
+      })),
+    [patches],
+  )
 
   useEffect(() => {
+    const cleanups: (() => void)[] = []
     const editor = editorRef.current
     if (!editor || !decorationsRef.current) {
       return
@@ -86,14 +89,11 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
       return
     }
 
-    decorationsRef.current.clear()
-    disposePatchWidgetsRef.current.forEach((dispose) => dispose())
-
     const newDecorations: monaco.editor.IModelDeltaDecoration[] = []
 
     for (const p of patchInfo) {
       const { patch, portalTarget } = p
-      const tokens = patch.path.split("/").slice(1)
+      const tokens = patch.path.split('/').slice(1)
       let node: Node | undefined = findNodeAtLocation(tree, tokens)
 
       if (!node && tokens.length > 0) {
@@ -112,7 +112,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
         patch.path,
         portalTarget,
       )
-      disposePatchWidgetsRef.current.push(disposePatchWidget)
+      cleanups.push(disposePatchWidget)
 
       decorationsRef.current?.append([
         {
@@ -134,13 +134,14 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
     decorationsRef.current.append(newDecorations)
     // Clean up decorations when the component unmounts
     return () => {
+      cleanups.forEach((cleanup) => cleanup())
       decorationsRef.current?.clear()
     }
-  }, [value])
+  }, [value, patches])
 
   return (
     <div
-      style={{ height: "400px", border: "1px solid #ddd", overflow: "hidden" }}
+      style={{ height: '400px', border: '1px solid #ddd', overflow: 'hidden' }}
     >
       <Editor
         defaultLanguage="json"
@@ -153,7 +154,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
           readOnly: readonly, // editor is editable
           minimap: { enabled: false },
           fontSize: 14,
-          language: "json",
+          language: 'json',
           glyphMargin: true,
           suggestOnTriggerCharacters: false, // disables on ":" or ","
           quickSuggestions: false, // disables inline suggestions
@@ -169,13 +170,13 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
               className="inline-button"
               onClick={() => onApply(p.patch)}
             >
-              {"<<"}
+              {'<<'}
             </button>
             <button
               className="inline-button"
               onClick={() => onDismiss(p.patch)}
             >
-              X
+              {'X'}
             </button>
           </div>,
           p.portalTarget,
@@ -207,12 +208,12 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
             color: rgba(0, 0, 0, 0.8);
             background-color: unset;
             transition: color 0.2s;
-            font-family: Menlo, Monaco, "Courier New", monospace;
+            font-family: Menlo, Monaco, 'Courier New', monospace;
             font-weight: normal;
             font-size: 14px;
             font-feature-settings:
-              "liga" 0,
-              "calt" 0;
+              'liga' 0,
+              'calt' 0;
             font-variation-settings: normal;
             line-height: 21px;
             letter-spacing: 0px;

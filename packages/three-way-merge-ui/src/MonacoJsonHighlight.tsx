@@ -23,26 +23,35 @@ export type MonacoJsonHighlightProps = {
   onApply: () => void
   onDismiss: () => void
 }
-
 const addPatchWidget = (
   editor: monaco.editor.IStandaloneCodeEditor,
   lineNumber: number,
   patchId: string,
   portalTarget: HTMLElement,
-  onApply: () => void,
-  onDismiss: () => void,
 ) => {
-  editor.addContentWidget({
-    getId: () => `patch-widget-${patchId}`,
-    getDomNode: () => portalTarget,
-    getPosition: () => ({
-      position: {
-        lineNumber,
-        column: 1,
-      },
-      preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
-    }),
-  })
+  const container = document.createElement("div")
+  container.style.position = "absolute"
+  container.style.left = "0px"
+  container.style.zIndex = "1000" // ensure it sits above editor layers
+  container.appendChild(portalTarget)
+
+  // Append to the editor's DOM node
+  editor.getDomNode()?.appendChild(container)
+
+  const updatePosition = () => {
+    const top = editor.getTopForLineNumber(lineNumber) - editor.getScrollTop()
+    container.style.top = `${top}px`
+  }
+
+  updatePosition()
+
+  // Update when the editor scrolls
+  const disposable = editor.onDidScrollChange(updatePosition)
+
+  return () => {
+    disposable.dispose()
+    container.remove()
+  }
 }
 
 export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
@@ -95,14 +104,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
       const start = model.getPositionAt(node.offset)
       const end = model.getPositionAt(node.offset + node.length)
 
-      addPatchWidget(
-        editor,
-        start.lineNumber,
-        patch.path,
-        portalTarget,
-        onApply,
-        onDismiss,
-      )
+      addPatchWidget(editor, start.lineNumber, patch.path, portalTarget)
 
       decorationsRef.current?.append([
         {
@@ -132,7 +134,9 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
   }, [])
 
   return (
-    <div style={{ height: "400px", border: "1px solid #ddd" }}>
+    <div
+      style={{ height: "400px", border: "1px solid #ddd", overflow: "hidden" }}
+    >
       <Editor
         defaultLanguage="json"
         defaultValue={formatted}
@@ -149,6 +153,9 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
           minimap: { enabled: false },
           fontSize: 14,
           language: "json",
+          glyphMargin: true,
+          suggestOnTriggerCharacters: false, // disables on ":" or ","
+          quickSuggestions: false, // disables inline suggestions
         }}
       />
       {patchInfo.map((p) =>
@@ -161,7 +168,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
               className="inline-button"
               onClick={onApply}
             >
-              {p.patch.op}
+              {"<<"}
             </button>
             <button
               className="inline-button"
@@ -188,10 +195,17 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
           .highlight-move {
             background-color: rgba(255, 165, 0, 0.3); /* orange for move */
           }
+          .button-container {
+            display: flex;
+            flex-wrap: nowrap;
+            padding: 0 4px;
+          }
           .inline-button {
             border: 0;
             padding: 2px;
+            color: rgba(0, 0, 0, 0.8);
             background-color: unset;
+            transition: color 0.2s;
             font-family: Menlo, Monaco, "Courier New", monospace;
             font-weight: normal;
             font-size: 14px;
@@ -202,9 +216,8 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
             line-height: 21px;
             letter-spacing: 0px;
           }
-          .button-container {
-            display: flex;
-            flex-wrap: nowrap;
+          .inline-button:hover {
+            color: rgba(0, 0, 0, 0.4);
           }
         `}
       </style>

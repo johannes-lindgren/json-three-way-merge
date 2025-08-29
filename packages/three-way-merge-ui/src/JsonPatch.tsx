@@ -1,4 +1,11 @@
-import { equals, object, oneOf, parseString, parseUnknown } from "pure-parse";
+import {
+  array,
+  equals,
+  object,
+  oneOf,
+  parseString,
+  parseUnknown,
+} from "pure-parse";
 
 export type JsonPatch =
   | { op: "add"; path: string; value: unknown }
@@ -27,3 +34,5 @@ export const parseJsonPatch = oneOf(
     path: parseString,
   }),
 );
+
+export const parseJsonPatches = array<JsonPatch>(parseJsonPatch);

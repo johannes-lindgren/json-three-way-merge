@@ -1,26 +1,26 @@
-import "./App.css"
-import { MonacoJsonHighlight } from "./MonacoJsonHighlight.tsx"
-import { type FunctionComponent, type ReactNode, useState } from "react"
-import SimpleTextEditor from "./SimpleTextEditor.tsx"
-import { formatResult, parseJson } from "pure-parse"
-import { type JsonPatch } from "./JsonPatch.tsx"
-import { css } from "./Css.tsx"
-import { applyPatches, diffPatch } from "./differ.ts"
+import './App.css'
+import { MonacoJsonHighlight } from './MonacoJsonHighlight.tsx'
+import { type FunctionComponent, type ReactNode, useState } from 'react'
+import SimpleTextEditor from './SimpleTextEditor.tsx'
+import { formatResult, parseJson } from 'pure-parse'
+import { type JsonPatch } from './JsonPatch.tsx'
+import { css } from './Css.tsx'
+import { applyPatch, diffPatch } from './differ.ts'
 
 const defaultBase = {
-  items: ["a", "b", "c", "d", "e"],
+  items: ['a', 'b', 'c', 'd', 'e'],
   user: {
-    name: "Alice",
+    name: 'Alice',
     age: 30,
     address: {
-      street: "123 Main St",
-      city: "Wonderland",
+      street: '123 Main St',
+      city: 'Wonderland',
     },
   },
   settings: {
-    theme: "light",
+    theme: 'light',
     notifications: true,
-    languages: ["en", "fr", "de"],
+    languages: ['en', 'fr', 'de'],
   },
 }
 
@@ -46,10 +46,11 @@ function App() {
   // )
   // const patchParseResult = chain(parseJson, parseJsonPatches)(patchText)
 
-  const [resolutionText, setResolutionText] = useState(baseText)
+  const [targetText, setTargetText] = useState(baseText)
+  const targetParseResult = parseJson(targetText)
 
   const handleApplyPatch = (patch: JsonPatch) => {
-    setResolutionText((resolutionText) => {
+    setTargetText((resolutionText) => {
       const result = parseJson(resolutionText)
       if (result.error) {
         return resolutionText
@@ -57,27 +58,26 @@ function App() {
       const patchesInPath = rightPatches.filter(
         (pat) => pat.path === patch.path,
       )
-      console.log("Apply patch", patchesInPath)
-      const newResolutionText = applyPatches(result.value, patchesInPath)
+      const newResolutionText = applyPatch(result.value, patchesInPath)
       return JSON.stringify(newResolutionText, null, 2)
     })
   }
 
   const handleDismissPatch = (patch: JsonPatch) => {
-    console.log("Dismiss patch", patch)
+    console.log('Dismiss patch', patch)
   }
 
   const handleReset = () => {
     setBaseText(stringify(defaultBase))
     setRightText(stringify(defaultRight))
-    setResolutionText(stringify(defaultBase))
+    setTargetText(stringify(defaultBase))
   }
 
   return (
     <div style={{ flex: 1 }}>
       <button onClick={handleReset}>Reset</button>
       <h1>JSON Patch Highlight Example</h1>
-      <div style={{ display: "flex", gap: 20, flexDirection: "column" }}>
+      <div style={{ display: 'flex', gap: 20, flexDirection: 'column' }}>
         <div className="three-way-container">
           <div className="panel">
             <h2>Base</h2>
@@ -121,14 +121,17 @@ function App() {
           <div className="panel">
             <h2>Result</h2>
             <SimpleTextEditor
-              value={resolutionText}
-              onChange={setResolutionText}
+              value={targetText}
+              onChange={setTargetText}
             />
           </div>
           <div className="panel">
             <h2>Right</h2>
             <MonacoJsonHighlight
-              json={rightValue}
+              targetDoc={
+                targetParseResult.error ? undefined : targetParseResult.value
+              }
+              doc={rightValue}
               patches={rightPatches}
               readonly
               onApply={handleApplyPatch}
@@ -156,7 +159,7 @@ function App() {
 const ErrorMessage: FunctionComponent<{
   children?: ReactNode
 }> = (props) => (
-  <div style={{ color: "red", fontWeight: "bold", margin: 20 }}>
+  <div style={{ color: 'red', fontWeight: 'bold', margin: 20 }}>
     {props.children}
   </div>
 )

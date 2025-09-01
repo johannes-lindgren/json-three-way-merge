@@ -5,6 +5,8 @@ import { findNodeAtLocation, type Node, parseTree } from 'jsonc-parser'
 import type { JsonPatch } from './JsonPatch.tsx'
 import { createPortal } from 'react-dom'
 import { css } from './Css.tsx'
+import { canApplyPatch } from './differ.ts'
+import type { JsonValue } from 'pure-parse'
 
 // Map patch type → class
 const patchClassMap: Record<JsonPatch['op'], string> = {
@@ -15,7 +17,8 @@ const patchClassMap: Record<JsonPatch['op'], string> = {
 }
 
 export type MonacoJsonHighlightProps = {
-  json: unknown
+  targetDoc: JsonValue | undefined
+  doc: unknown
   patches: JsonPatch[]
   onApply: (patch: JsonPatch) => void
   onDismiss: (patch: JsonPatch) => void
@@ -24,7 +27,7 @@ export type MonacoJsonHighlightProps = {
 const addPatchWidget = (
   editor: monaco.editor.IStandaloneCodeEditor,
   lineNumber: number,
-  patchId: string,
+  _patchId: string,
   portalTarget: HTMLElement,
 ) => {
   const container = document.createElement('div')
@@ -55,9 +58,9 @@ const addPatchWidget = (
 export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
   props,
 ) => {
-  const { json, patches, onApply, onDismiss, readonly } = props
+  const { doc, targetDoc, patches, onApply, onDismiss, readonly } = props
 
-  const value = useMemo(() => JSON.stringify(json, null, 2), [json])
+  const value = useMemo(() => JSON.stringify(doc, null, 2), [doc])
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef =
@@ -167,7 +170,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
             key={p.patch.path}
           >
             <button
-              className="inline-button"
+              className={`inline-button ${canApplyPatch(targetDoc, [p.patch]) ? '' : 'disabled'}`}
               onClick={() => onApply(p.patch)}
             >
               {'<<'}
@@ -201,10 +204,11 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
             display: flex;
             flex-wrap: nowrap;
             padding: 0 4px;
+            gap: 5px;
           }
           .inline-button {
             border: 0;
-            padding: 2px;
+            padding: 0;
             color: rgba(0, 0, 0, 0.8);
             background-color: unset;
             transition: color 0.2s;
@@ -217,6 +221,10 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
             font-variation-settings: normal;
             line-height: 21px;
             letter-spacing: 0px;
+          }
+          .inline-button.disabled {
+            color: rgba(0, 0, 0, 0.2);
+            pointer-events: none;
           }
           .inline-button:hover {
             color: rgba(0, 0, 0, 0.4);

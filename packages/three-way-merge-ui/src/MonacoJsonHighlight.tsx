@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react'
-import Editor from '@monaco-editor/react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 import { findNodeAtLocation, type Node, parseTree } from 'jsonc-parser'
 import type { JsonPatchOp } from './JsonPatchOp.tsx'
@@ -17,15 +17,6 @@ const patchClassMap: Record<JsonPatchOp['op'], string> = {
   move: 'highlight-move',
 }
 
-export type MonacoJsonHighlightProps = {
-  targetDoc: JsonValue | undefined
-  doc: unknown
-  patches: JsonPatchOp[]
-  onApply: (patch: JsonPatchOp) => void
-  onDismiss: (patch: JsonPatchOp) => void
-  readonly?: boolean
-  conflicts: PatchConflict[]
-}
 const addPatchWidget = (
   editor: monaco.editor.IStandaloneCodeEditor,
   lineNumber: number,
@@ -57,15 +48,45 @@ const addPatchWidget = (
   }
 }
 
+export type MonacoJsonHighlightProps = {
+  targetDoc: JsonValue | undefined
+  doc: unknown
+  patches: JsonPatchOp[]
+  onApply: (patch: JsonPatchOp) => void
+  onDismiss: (patch: JsonPatchOp) => void
+  readonly?: boolean
+  conflicts: PatchConflict[]
+  onMount?: OnMount
+}
+
 export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
   props,
 ) => {
-  const { doc, targetDoc, patches, onApply, onDismiss, readonly, conflicts } =
-    props
+  const {
+    doc,
+    targetDoc,
+    patches,
+    onApply,
+    onDismiss,
+    readonly,
+    conflicts,
+    onMount,
+  } = props
 
   const value = useMemo(() => JSON.stringify(doc, null, 2), [doc])
 
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | undefined>(
+    undefined,
+  )
+  const handleMount: OnMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor
+      decorationsRef.current = editor.createDecorationsCollection()
+      onMount?.(editor, monaco)
+    },
+    [onMount],
+  )
+
   const decorationsRef =
     useRef<monaco.editor.IEditorDecorationsCollection | null>(null)
 
@@ -143,7 +164,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
       cleanups.forEach((cleanup) => cleanup())
       decorationsRef.current?.clear()
     }
-  }, [value, patches, conflicts])
+  }, [value, patches, conflicts, patchInfo])
 
   return (
     <div
@@ -152,10 +173,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
       <Editor
         defaultLanguage="json"
         value={value}
-        onMount={(editor) => {
-          editorRef.current = editor
-          decorationsRef.current = editor.createDecorationsCollection()
-        }}
+        onMount={handleMount}
         options={{
           readOnly: readonly, // editor is editable
           minimap: { enabled: false },

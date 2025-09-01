@@ -4,6 +4,7 @@ import {
   type FunctionComponent,
   type ReactNode,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import SimpleTextEditor from './SimpleTextEditor.tsx'
@@ -13,6 +14,8 @@ import { css } from './Css.tsx'
 import { applyPatch, diffPatch } from './differ.ts'
 import { findConflictsByPath } from './conflicts.ts'
 import { palette } from './palette.ts'
+import * as monaco from 'monaco-editor'
+import type { OnMount } from '@monaco-editor/react'
 
 const defaultBase = {
   id: 0,
@@ -84,6 +87,39 @@ function App() {
     setTargetText(stringify(defaultBase))
   }
 
+  const srcEditorsRef = useRef<monaco.editor.IStandaloneCodeEditor[]>([])
+  const mergeEditorsRef = useRef<monaco.editor.IStandaloneCodeEditor[]>([])
+
+  const handleMountMergeEditor: OnMount = (editor) => {
+    mergeEditorsRef.current.push(editor)
+
+    editor.onDidScrollChange((e) => {
+      if (!e.scrollTopChanged) return
+      const scrollTop = editor.getScrollTop()
+
+      mergeEditorsRef.current.forEach((ed) => {
+        if (ed !== editor) {
+          ed.setScrollTop(scrollTop)
+        }
+      })
+    })
+  }
+
+  const handleMountSrcEditor: OnMount = (editor) => {
+    srcEditorsRef.current.push(editor)
+
+    editor.onDidScrollChange((e) => {
+      if (!e.scrollTopChanged) return
+      const scrollTop = editor.getScrollTop()
+
+      srcEditorsRef.current.forEach((ed) => {
+        if (ed !== editor) {
+          ed.setScrollTop(scrollTop)
+        }
+      })
+    })
+  }
+
   return (
     <div
       style={{
@@ -134,6 +170,7 @@ function App() {
               <SimpleTextEditor
                 value={leftText}
                 onChange={setLeftText}
+                onMount={handleMountSrcEditor}
               />
               {leftParseResult.error && (
                 <ErrorMessage>
@@ -149,6 +186,7 @@ function App() {
               <SimpleTextEditor
                 value={baseText}
                 onChange={setBaseText}
+                onMount={handleMountSrcEditor}
               />
               {baseParseResult.error && (
                 <ErrorMessage>
@@ -164,6 +202,7 @@ function App() {
               <SimpleTextEditor
                 value={rightText}
                 onChange={setRightText}
+                onMount={handleMountSrcEditor}
               />
               {rightParseResult.error && (
                 <ErrorMessage>
@@ -244,6 +283,7 @@ function App() {
                 readonly
                 onApply={handleApplyPatch}
                 onDismiss={handleDismissPatch}
+                onMount={handleMountMergeEditor}
               />
             </div>
             <div className="panel">
@@ -251,6 +291,7 @@ function App() {
               <SimpleTextEditor
                 value={targetText}
                 onChange={setTargetText}
+                onMount={handleMountMergeEditor}
               />
               {targetParseResult.error && (
                 <ErrorMessage>
@@ -270,6 +311,7 @@ function App() {
                 readonly
                 onApply={handleApplyPatch}
                 onDismiss={handleDismissPatch}
+                onMount={handleMountMergeEditor}
               />
             </div>
           </div>

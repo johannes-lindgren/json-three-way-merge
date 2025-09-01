@@ -12,6 +12,7 @@ import { type JsonPatchOp } from './JsonPatchOp.tsx'
 import { css } from './Css.tsx'
 import { applyPatch, diffPatch } from './differ.ts'
 import { findConflictsByPath } from './conflicts.ts'
+import { palette } from './palette.ts'
 
 const defaultBase = {
   id: 0,
@@ -52,8 +53,6 @@ function App() {
 
   const leftPatches = diffPatch(baseValue, leftValue)
   const rightPatches = diffPatch(baseValue, rightValue)
-  console.log('leftPatches', leftPatches)
-  console.log('rightPatches', rightPatches)
   const conflicts = useMemo(
     () => findConflictsByPath(leftPatches, rightPatches),
     [leftPatches, rightPatches],
@@ -200,8 +199,38 @@ function App() {
           </div>
         </div>
         <div className="section">
-          <h2>Three-way Merge Tool</h2>
-          <p>Here you perform the three-way merge.</p>
+          <div
+            style={{
+              maxWidth: '600px',
+              textAlign: 'left',
+              alignSelf: 'center',
+            }}
+          >
+            <h2>Three-way Merge Tool</h2>
+            <p>Here you perform the three-way merge.</p>
+            <ul style={{ listStyle: 'none', listStylePosition: 'inside' }}>
+              <li>
+                <span style={boxStyle(palette.green)} />
+                &nbsp;add
+              </li>
+              <li>
+                <span style={boxStyle(palette.grey)} />
+                &nbsp;remove
+              </li>
+              <li>
+                <span style={boxStyle(palette.blue)} />
+                &nbsp;change
+              </li>
+              <li>
+                <span style={boxStyle(palette.yellow)} />
+                &nbsp;move
+              </li>
+              <li>
+                <span style={boxStyle(palette.red)} />
+                &nbsp;conflict
+              </li>
+            </ul>
+          </div>
           <div className="three-way-container">
             <div className="panel">
               <h3>Left</h3>
@@ -275,5 +304,11 @@ const ErrorMessage: FunctionComponent<{
     {props.children}
   </div>
 )
+
+const boxStyle = (backgroundColor: string) => ({
+  backgroundColor: backgroundColor,
+  paddingLeft: '20px',
+  paddingRight: '20px',
+})
 
 export default App

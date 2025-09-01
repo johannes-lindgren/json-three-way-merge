@@ -2,7 +2,7 @@ import * as jsondiffpatch from 'jsondiffpatch'
 import * as jsonpatchFormatter from 'jsondiffpatch/formatters/jsonpatch'
 import * as jsonpatch from 'fast-json-patch'
 import type { Operation } from 'fast-json-patch'
-import type { JsonPatch } from './JsonPatch.tsx'
+import type { JsonPatchOp } from './JsonPatchOp.tsx'
 
 const diffpatcher = jsondiffpatch.create({})
 
@@ -25,8 +25,8 @@ export function canApplyPatch(doc: unknown, patch: Operation[]): boolean {
 }
 
 // TODO test!
-const mergeRemoveAndAdd = (ops: JsonPatch[]): JsonPatch[] => {
-  const result: JsonPatch[] = []
+const mergeRemoveAndAdd = (ops: JsonPatchOp[]): JsonPatchOp[] => {
+  const result: JsonPatchOp[] = []
   for (let i = 0; i < ops.length; i++) {
     const current = ops[i]
     const next = ops[i + 1]

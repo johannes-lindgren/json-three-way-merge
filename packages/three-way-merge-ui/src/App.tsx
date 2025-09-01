@@ -3,7 +3,7 @@ import { MonacoJsonHighlight } from './MonacoJsonHighlight.tsx'
 import { type FunctionComponent, type ReactNode, useState } from 'react'
 import SimpleTextEditor from './SimpleTextEditor.tsx'
 import { formatResult, parseJson } from 'pure-parse'
-import { type JsonPatch } from './JsonPatch.tsx'
+import { type JsonPatchOp } from './JsonPatchOp.tsx'
 import { css } from './Css.tsx'
 import { applyPatch, diffPatch } from './differ.ts'
 
@@ -24,51 +24,48 @@ const defaultBase = {
   },
 }
 
+const defaultLeft = defaultBase
 const defaultRight = defaultBase
 
 const stringify = (obj: unknown) => JSON.stringify(obj, null, 2)
 
 function App() {
+  const [leftText, setLeftText] = useState(() => stringify(defaultBase))
   const [baseText, setBaseText] = useState(() => stringify(defaultBase))
   const [rightText, setRightText] = useState(() => stringify(defaultRight))
 
+  const leftParseResult = parseJson(leftText)
   const baseParseResult = parseJson(baseText)
   const rightParseResult = parseJson(rightText)
 
+  const leftValue = leftParseResult.error ? null : leftParseResult.value
   const baseValue = baseParseResult.error ? null : baseParseResult.value
   const rightValue = rightParseResult.error ? null : rightParseResult.value
 
+  const leftPatches = diffPatch(baseValue, leftValue)
   const rightPatches = diffPatch(baseValue, rightValue)
-
-  // TODO allow customizing the patches again?
-  // const [patchText, setPatchText] = useState(
-  //   JSON.stringify(defaultPatches, null, 2),
-  // )
-  // const patchParseResult = chain(parseJson, parseJsonPatches)(patchText)
 
   const [targetText, setTargetText] = useState(baseText)
   const targetParseResult = parseJson(targetText)
 
-  const handleApplyPatch = (patch: JsonPatch) => {
-    setTargetText((resolutionText) => {
-      const result = parseJson(resolutionText)
+  const handleApplyPatch = (op: JsonPatchOp) => {
+    setTargetText((currentTargetText) => {
+      const result = parseJson(currentTargetText)
       if (result.error) {
-        return resolutionText
+        return currentTargetText
       }
-      const patchesInPath = rightPatches.filter(
-        (pat) => pat.path === patch.path,
-      )
-      const newResolutionText = applyPatch(result.value, patchesInPath)
+      const newResolutionText = applyPatch(result.value, [op])
       return JSON.stringify(newResolutionText, null, 2)
     })
   }
 
-  const handleDismissPatch = (patch: JsonPatch) => {
+  const handleDismissPatch = (op: JsonPatchOp) => {
     alert('Not implemented yet')
-    console.log('Dismiss patch', patch)
+    console.log('Dismiss patch', op)
   }
 
   const handleReset = () => {
+    setLeftText(stringify(defaultLeft))
     setBaseText(stringify(defaultBase))
     setRightText(stringify(defaultRight))
     setTargetText(stringify(defaultBase))
@@ -84,21 +81,19 @@ function App() {
       }}
     >
       <h1>JSON Patch Merge</h1>
-      <p>A JSON-specific merge tool.</p>
+      <p>A three-way merge tool that operates on JSON documents.</p>
       <div style={{ maxWidth: '600px', textAlign: 'left' }}>
         <p>This is a proof of concept of a merge tool for JSON documents.</p>
-        <p>
-          Try it by:
-          <ol style={{ listStylePosition: 'inside' }}>
-            <li>
-              Editing the right side of the document. This simulates an incoming
-              change.
-            </li>
-            <li>Scroll down to see the generated JSON patches (readonly)</li>
-            <li>Scroll down again to see the merge editor.</li>
-            <li>Apply a patch by clicking "{'<<'}"</li>
-          </ol>
-        </p>
+        <p>Try it by:</p>
+        <ol style={{ listStylePosition: 'inside' }}>
+          <li>
+            Editing the right side of the document. This simulates an incoming
+            change.
+          </li>
+          <li>Scroll down to see the generated JSON patches (readonly)</li>
+          <li>Scroll down again to see the merge editor.</li>
+          <li>Apply a patch by clicking "{'<<'}"</li>
+        </ol>
       </div>
       <div>
         <button onClick={handleReset}>Reset</button>
@@ -111,69 +106,132 @@ function App() {
           width: '100%',
         }}
       >
-        <div className="three-way-container">
-          <div className="panel">
-            <h2>Base</h2>
-            <p>This is the common ancestor</p>
-            <SimpleTextEditor
-              value={baseText}
-              onChange={setBaseText}
-            />
-            {baseParseResult.error && (
-              <ErrorMessage>
-                Error parsing patch: {formatResult(baseParseResult)}
-              </ErrorMessage>
-            )}
-          </div>
-          <div className="panel">
-            <h2>Right</h2>
-            <p>These changes needs to be merged with left.</p>
-            <SimpleTextEditor
-              value={rightText}
-              onChange={setRightText}
-            />
-            {rightParseResult.error && (
-              <ErrorMessage>
-                Error parsing patch: {formatResult(rightParseResult)}
-              </ErrorMessage>
-            )}
+        <div className="section">
+          <h2>Document Versions</h2>
+          <p>
+            This section represents the three different versions of the
+            document.
+          </p>
+          <div className="three-way-container">
+            <div className="panel">
+              <h3>Left</h3>
+              <p>
+                These changes needs to be merged with <i>right</i>.
+              </p>
+              <SimpleTextEditor
+                value={leftText}
+                onChange={setLeftText}
+              />
+              {leftParseResult.error && (
+                <ErrorMessage>
+                  Error parsing patch: {formatResult(leftParseResult)}
+                </ErrorMessage>
+              )}
+            </div>
+            <div className="panel">
+              <h3>Base</h3>
+              <p>
+                This is the common ancestor of <i>left</i> and <i>right</i>
+              </p>
+              <SimpleTextEditor
+                value={baseText}
+                onChange={setBaseText}
+              />
+              {baseParseResult.error && (
+                <ErrorMessage>
+                  Error parsing patch: {formatResult(baseParseResult)}
+                </ErrorMessage>
+              )}
+            </div>
+            <div className="panel">
+              <h3>Right</h3>
+              <p>
+                These changes needs to be merged with <i>left</i>.
+              </p>
+              <SimpleTextEditor
+                value={rightText}
+                onChange={setRightText}
+              />
+              {rightParseResult.error && (
+                <ErrorMessage>
+                  Error parsing patch: {formatResult(rightParseResult)}
+                </ErrorMessage>
+              )}
+            </div>
           </div>
         </div>
-        <div className="three-way-container">
-          <div className="panel"></div>
-          <div className="panel">
-            <h2>Patches</h2>
-            <p>Applying these patches will result in right</p>
-            <SimpleTextEditor
-              value={stringify(rightPatches)}
-              readonly
-            />
+        <div className="section">
+          <h2>JSON Patches Versions</h2>
+          <p>Here you see the calculated JSON patches.</p>
+          <div className="three-way-container">
+            <div className="panel">
+              <h3>Left</h3>
+              <p>
+                Applying these patches will result in <i>left</i>
+              </p>
+              <SimpleTextEditor
+                value={stringify(leftPatches)}
+                readonly
+              />
+            </div>
+            <div className="panel"></div>
+            <div className="panel">
+              <h3>Right</h3>
+              <p>Applying these patches will result in right</p>
+              <SimpleTextEditor
+                value={stringify(rightPatches)}
+                readonly
+              />
+            </div>
           </div>
         </div>
-        <div className="three-way-container">
-          <div className="panel">
-            <h2>Result</h2>
-            <SimpleTextEditor
-              value={targetText}
-              onChange={setTargetText}
-            />
-          </div>
-          <div className="panel">
-            <h2>Right</h2>
-            <MonacoJsonHighlight
-              targetDoc={
-                targetParseResult.error ? undefined : targetParseResult.value
-              }
-              doc={rightValue}
-              patches={rightPatches}
-              readonly
-              onApply={handleApplyPatch}
-              onDismiss={handleDismissPatch}
-            />
+        <div className="section">
+          <h2>Three-way Merge Tool</h2>
+          <p>Here you perform the three-way merge.</p>
+          <div className="three-way-container">
+            <div className="panel">
+              <h3>Left</h3>
+              <MonacoJsonHighlight
+                targetDoc={
+                  targetParseResult.error ? undefined : targetParseResult.value
+                }
+                doc={leftValue}
+                patches={leftPatches}
+                readonly
+                onApply={handleApplyPatch}
+                onDismiss={handleDismissPatch}
+              />
+            </div>
+            <div className="panel">
+              <h3>Result</h3>
+              <SimpleTextEditor
+                value={targetText}
+                onChange={setTargetText}
+              />
+            </div>
+            <div className="panel">
+              <h3>Right</h3>
+              <MonacoJsonHighlight
+                targetDoc={
+                  targetParseResult.error ? undefined : targetParseResult.value
+                }
+                doc={rightValue}
+                patches={rightPatches}
+                readonly
+                onApply={handleApplyPatch}
+                onDismiss={handleDismissPatch}
+              />
+            </div>
           </div>
         </div>
       </div>
       <style>{css`
+        .section {
+          display: flex;
+          flex-direction: column;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #ccc;
+        }
         .three-way-container {
           display: flex;
           flex-wrap: nowrap;
@@ -182,7 +240,7 @@ function App() {
         .panel {
           display: flex;
           flex-direction: column;
-          flex: 0.5;
+          flex: 0.333333333;
         }
       `}</style>
     </div>

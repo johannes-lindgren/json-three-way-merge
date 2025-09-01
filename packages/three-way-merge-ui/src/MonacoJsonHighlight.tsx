@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useRef } from 'react'
 import Editor from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 import { findNodeAtLocation, type Node, parseTree } from 'jsonc-parser'
-import type { JsonPatch } from './JsonPatch.tsx'
+import type { JsonPatchOp } from './JsonPatchOp.tsx'
 import { createPortal } from 'react-dom'
 import { css } from './Css.tsx'
 import { canApplyPatch } from './differ.ts'
 import type { JsonValue } from 'pure-parse'
 
 // Map patch type → class
-const patchClassMap: Record<JsonPatch['op'], string> = {
+const patchClassMap: Record<JsonPatchOp['op'], string> = {
   add: 'highlight-add',
   remove: 'highlight-remove',
   replace: 'highlight-replace',
@@ -19,9 +19,9 @@ const patchClassMap: Record<JsonPatch['op'], string> = {
 export type MonacoJsonHighlightProps = {
   targetDoc: JsonValue | undefined
   doc: unknown
-  patches: JsonPatch[]
-  onApply: (patch: JsonPatch) => void
-  onDismiss: (patch: JsonPatch) => void
+  patches: JsonPatchOp[]
+  onApply: (patch: JsonPatchOp) => void
+  onDismiss: (patch: JsonPatchOp) => void
   readonly?: boolean
 }
 const addPatchWidget = (

@@ -188,17 +188,21 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
       <style>
         {css`
           .highlight-replace {
-            background-color: rgba(65, 105, 225, 0.3); /* blue for add */
+            background-color: rgba(65, 105, 225, 0.3);
+          }
+          .highlight-conflict {
+            background-color: rgba(220, 20, 60, 0.3);
+            text-decoration: line-through;
           }
           .highlight-remove {
-            background-color: rgba(220, 20, 60, 0.3); /* red for remove */
+            background-color: rgba(0, 0, 0, 0.1);
             text-decoration: line-through;
           }
           .highlight-add {
-            background-color: rgba(34, 139, 34, 0.3); /* green for move */
+            background-color: rgba(34, 139, 34, 0.3);
           }
           .highlight-move {
-            background-color: rgba(255, 165, 0, 0.3); /* orange for move */
+            background-color: rgba(255, 165, 0, 0.3);
           }
           .button-container {
             display: flex;

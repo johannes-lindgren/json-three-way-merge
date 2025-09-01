@@ -7,20 +7,46 @@ const diffpatcher = jsondiffpatch.create({})
 
 export const diffPatch = (left: unknown, right: unknown) => {
   const delta = diffpatcher.diff(left, right)
-  return jsonpatchFormatter.format(delta)
+  return mergeRemoveAndAdd(jsonpatchFormatter.format(delta))
 }
 
 export const applyPatch = (doc: unknown, patch: Operation[]) =>
-  jsonpatch.applyPatch(doc, patch, true, false)
+  jsonpatch.applyPatch(doc, patch, true, false).newDocument
 
 // TODO implement faster version
 export function canApplyPatch(doc: unknown, patch: Operation[]): boolean {
   try {
-    const res = applyPatch(doc, patch)
-    console.log('can apply', patch, 'to', doc, '=', res)
+    applyPatch(doc, patch)
     return true
   } catch {
-    console.log('cannot apply', patch)
     return false
   }
+}
+
+// TODO test!
+const mergeRemoveAndAdd = (ops: Operation[]): Operation[] => {
+  const result = []
+  for (let i = 0; i < ops.length; i++) {
+    const current = ops[i]
+    const next = ops[i + 1]
+
+    if (
+      current &&
+      next &&
+      current.op === 'remove' &&
+      next.op === 'add' &&
+      current.path === next.path
+    ) {
+      // Merge into replace
+      result.push({
+        op: 'replace',
+        path: current.path,
+        value: next.value,
+      })
+      i++ // Skip the next one since it's merged
+    } else {
+      result.push(current)
+    }
+  }
+  return result
 }

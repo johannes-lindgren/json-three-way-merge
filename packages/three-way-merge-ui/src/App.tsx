@@ -64,6 +64,7 @@ function App() {
   }
 
   const handleDismissPatch = (patch: JsonPatch) => {
+    alert('Not implemented yet')
     console.log('Dismiss patch', patch)
   }
 
@@ -74,10 +75,42 @@ function App() {
   }
 
   return (
-    <div style={{ flex: 1 }}>
-      <button onClick={handleReset}>Reset</button>
-      <h1>JSON Patch Highlight Example</h1>
-      <div style={{ display: 'flex', gap: 20, flexDirection: 'column' }}>
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <h1>JSON Patch Merge</h1>
+      <p>A JSON-specific merge tool.</p>
+      <div style={{ maxWidth: '600px', textAlign: 'left' }}>
+        <p>This is a proof of concept of a merge tool for JSON documents.</p>
+        <p>
+          Try it by:
+          <ol style={{ listStylePosition: 'inside' }}>
+            <li>
+              Editing the right side of the document. This simulates an incoming
+              change.
+            </li>
+            <li>Scroll down to see the generated JSON patches (readonly)</li>
+            <li>Scroll down again to see the merge editor.</li>
+            <li>Apply a patch by clicking "{'<<'}"</li>
+          </ol>
+        </p>
+      </div>
+      <div>
+        <button onClick={handleReset}>Reset</button>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          gap: 20,
+          flexDirection: 'column',
+          width: '100%',
+        }}
+      >
         <div className="three-way-container">
           <div className="panel">
             <h2>Base</h2>

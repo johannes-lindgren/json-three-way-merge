@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import { css } from './Css.tsx'
 import { canApplyPatch } from './differ.ts'
 import type { JsonValue } from 'pure-parse'
+import type { PatchConflict } from './conflicts.ts'
 
 // Map patch type → class
 const patchClassMap: Record<JsonPatchOp['op'], string> = {
@@ -23,6 +24,7 @@ export type MonacoJsonHighlightProps = {
   onApply: (patch: JsonPatchOp) => void
   onDismiss: (patch: JsonPatchOp) => void
   readonly?: boolean
+  conflicts: PatchConflict[]
 }
 const addPatchWidget = (
   editor: monaco.editor.IStandaloneCodeEditor,
@@ -58,7 +60,8 @@ const addPatchWidget = (
 export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
   props,
 ) => {
-  const { doc, targetDoc, patches, onApply, onDismiss, readonly } = props
+  const { doc, targetDoc, patches, onApply, onDismiss, readonly, conflicts } =
+    props
 
   const value = useMemo(() => JSON.stringify(doc, null, 2), [doc])
 
@@ -127,7 +130,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
           ),
           options: {
             isWholeLine: true,
-            className: patchClassMap[patch.op],
+            className: `${patchClassMap[patch.op]} ${conflicts.some((c) => c.path === patch.path) ? 'highlight-conflict' : ''}`,
           },
         },
       ])
@@ -140,7 +143,7 @@ export const MonacoJsonHighlight: React.FC<MonacoJsonHighlightProps> = (
       cleanups.forEach((cleanup) => cleanup())
       decorationsRef.current?.clear()
     }
-  }, [value, patches])
+  }, [value, patches, conflicts])
 
   return (
     <div

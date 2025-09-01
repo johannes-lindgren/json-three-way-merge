@@ -1,13 +1,21 @@
 import './App.css'
 import { MonacoJsonHighlight } from './MonacoJsonHighlight.tsx'
-import { type FunctionComponent, type ReactNode, useState } from 'react'
+import {
+  type FunctionComponent,
+  type ReactNode,
+  useMemo,
+  useState,
+} from 'react'
 import SimpleTextEditor from './SimpleTextEditor.tsx'
 import { formatResult, parseJson } from 'pure-parse'
 import { type JsonPatchOp } from './JsonPatchOp.tsx'
 import { css } from './Css.tsx'
 import { applyPatch, diffPatch } from './differ.ts'
+import { findConflictsByPath } from './conflicts.ts'
 
 const defaultBase = {
+  id: 0,
+  uid: 'abc',
   items: ['a', 'b', 'c', 'd', 'e'],
   user: {
     name: 'Alice',
@@ -44,6 +52,12 @@ function App() {
 
   const leftPatches = diffPatch(baseValue, leftValue)
   const rightPatches = diffPatch(baseValue, rightValue)
+  console.log('leftPatches', leftPatches)
+  console.log('rightPatches', rightPatches)
+  const conflicts = useMemo(
+    () => findConflictsByPath(leftPatches, rightPatches),
+    [leftPatches, rightPatches],
+  )
 
   const [targetText, setTargetText] = useState(baseText)
   const targetParseResult = parseJson(targetText)
@@ -197,6 +211,7 @@ function App() {
                 }
                 doc={leftValue}
                 patches={leftPatches}
+                conflicts={conflicts}
                 readonly
                 onApply={handleApplyPatch}
                 onDismiss={handleDismissPatch}
@@ -222,6 +237,7 @@ function App() {
                 }
                 doc={rightValue}
                 patches={rightPatches}
+                conflicts={conflicts}
                 readonly
                 onApply={handleApplyPatch}
                 onDismiss={handleDismissPatch}

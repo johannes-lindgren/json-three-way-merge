@@ -208,6 +208,11 @@ function App() {
                 value={targetText}
                 onChange={setTargetText}
               />
+              {targetParseResult.error && (
+                <ErrorMessage>
+                  Error parsing patch: {formatResult(targetParseResult)}
+                </ErrorMessage>
+              )}
             </div>
             <div className="panel">
               <h3>Right</h3>
